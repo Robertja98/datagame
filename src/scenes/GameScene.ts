@@ -6,10 +6,13 @@ type AnswerGate = Phaser.GameObjects.Image & {
   body: Phaser.Physics.Arcade.StaticBody;
   answerIndex: number;
   answerLabel: Phaser.GameObjects.Text;
+  refreshBody: () => AnswerGate;
 };
 
 type EnemySprite = Phaser.Physics.Arcade.Image & {
   laneY: number;
+  laneIndex: number;
+  direction: 1 | -1;
 };
 
 export class GameScene extends Phaser.Scene {
@@ -36,6 +39,7 @@ export class GameScene extends Phaser.Scene {
   private lastShotAt = 0;
   private acceptingAnswer = true;
   private gameOver = false;
+  private recovering = false;
 
   constructor() {
     super('game');
@@ -79,7 +83,13 @@ export class GameScene extends Phaser.Scene {
       velocityY = speed;
     }
 
-    this.player.setVelocity(velocityX, velocityY);
+    if (this.recovering) {
+      this.player.setVelocity(0, 0);
+    } else {
+      this.player.setVelocity(velocityX, velocityY);
+    }
+
+    this.wrapEnemiesAcrossScreen();
 
     if (Phaser.Input.Keyboard.JustDown(this.fireKey) && time - this.lastShotAt > 250) {
       this.spawnShot();
@@ -171,9 +181,9 @@ export class GameScene extends Phaser.Scene {
         const x = 140 + count * 220;
         const enemy = this.physics.add.image(x, laneY, 'enemy') as EnemySprite;
         enemy.laneY = laneY;
+        enemy.laneIndex = laneIndex;
+        enemy.direction = direction as 1 | -1;
         enemy.setVelocityX(this.getLaneSpeed(laneIndex) * direction);
-        enemy.setCollideWorldBounds(true);
-        enemy.setBounce(1, 0);
         this.enemies.add(enemy);
       }
     });
@@ -222,7 +232,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleAnswer(answerIndex: number): void {
-    if (!this.acceptingAnswer || this.gameOver || this.player.y > 130) {
+    if (!this.acceptingAnswer || this.gameOver || this.recovering || this.player.y > 130) {
       return;
     }
 
@@ -250,7 +260,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerHit(): void {
-    if (this.gameOver) {
+    if (this.gameOver || this.recovering) {
       return;
     }
 
@@ -263,12 +273,7 @@ export class GameScene extends Phaser.Scene {
 
     enemy.disableBody(true, true);
     this.time.delayedCall(1200, () => {
-      const respawnX = Phaser.Math.Between(80, 880);
-      enemy.enableBody(true, respawnX, enemy.laneY, true, true);
-      const speed = Phaser.Math.Between(this.getMinimumRespawnSpeed(), this.getMaximumRespawnSpeed()) * (Math.random() > 0.5 ? 1 : -1);
-      enemy.setVelocityX(speed);
-      enemy.setCollideWorldBounds(true);
-      enemy.setBounce(1, 0);
+      this.respawnEnemy(enemy);
     });
   }
 
@@ -286,9 +291,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private loseLife(): void {
-    if (this.gameOver) {
+    if (this.gameOver || this.recovering) {
       return;
     }
+
+    this.recovering = true;
+    this.acceptingAnswer = false;
+    this.player.setVelocity(0, 0);
+    this.player.disableBody(true, true);
 
     this.lives -= 1;
     this.livesText.setText(`Lives: ${this.lives}`);
@@ -298,16 +308,17 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.acceptingAnswer = false;
     this.time.delayedCall(900, () => {
-      this.acceptingAnswer = true;
       this.resetPlayer();
     });
   }
 
   private resetPlayer(): void {
-    this.player.setPosition(480, 560);
+    this.player.enableBody(true, 480, 560, true, true);
     this.player.setVelocity(0, 0);
+    this.player.setCollideWorldBounds(true);
+    this.recovering = false;
+    this.acceptingAnswer = true;
   }
 
   private maybeAdvanceDifficulty(): boolean {
@@ -322,6 +333,7 @@ export class GameScene extends Phaser.Scene {
     this.questionDeck.setDifficulty(this.level);
     this.levelText.setText(`Level ${this.level}: ${getDifficultyLabel(this.level)}`);
     this.applyDifficultyScaling();
+    this.repositionAnswerGates();
     this.updateProgressText();
 
     return true;
@@ -346,10 +358,13 @@ export class GameScene extends Phaser.Scene {
   private applyDifficultyScaling(): void {
     const enemyChildren = this.enemies.getChildren() as EnemySprite[];
 
-    enemyChildren.forEach((enemy, index) => {
-      const direction = !enemy.body || enemy.body.velocity.x >= 0 ? 1 : -1;
-      const laneIndex = index % 4;
-      enemy.setVelocityX(this.getLaneSpeed(laneIndex) * direction);
+    enemyChildren.forEach((enemy) => {
+      if (!enemy.active) {
+        this.respawnEnemy(enemy);
+        return;
+      }
+
+      enemy.setVelocityX(this.getLaneSpeed(enemy.laneIndex) * enemy.direction);
     });
   }
 
@@ -363,6 +378,56 @@ export class GameScene extends Phaser.Scene {
 
     const remaining = nextThreshold - this.correctAnswers;
     this.progressText.setText(`${remaining} more correct answer${remaining === 1 ? '' : 's'} until Level ${this.level + 1}.`);
+  }
+
+  private respawnEnemy(enemy: EnemySprite): void {
+    const halfWidth = enemy.displayWidth / 2;
+    const spawnX = enemy.direction === 1 ? -halfWidth : this.scale.width + halfWidth;
+    const speed = Phaser.Math.Between(this.getMinimumRespawnSpeed(), this.getMaximumRespawnSpeed());
+
+    enemy.enableBody(true, spawnX, enemy.laneY, true, true);
+    enemy.setVelocityX(speed * enemy.direction);
+  }
+
+  private wrapEnemiesAcrossScreen(): void {
+    const width = this.scale.width;
+
+    (this.enemies.getChildren() as EnemySprite[]).forEach((enemy) => {
+      if (!enemy.active) {
+        return;
+      }
+
+      const halfWidth = enemy.displayWidth / 2;
+
+      if (enemy.direction === 1 && enemy.x - halfWidth > width) {
+        enemy.x = -halfWidth;
+      }
+
+      if (enemy.direction === -1 && enemy.x + halfWidth < 0) {
+        enemy.x = width + halfWidth;
+      }
+    });
+  }
+
+  private repositionAnswerGates(): void {
+    const positions = Phaser.Utils.Array.Shuffle([170, 480, 790]);
+
+    this.gates.forEach((gate, index) => {
+      const nextX = positions[index];
+
+      this.tweens.add({
+        targets: [gate, gate.answerLabel],
+        x: nextX,
+        duration: 300,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => {
+          gate.refreshBody();
+        },
+        onComplete: () => {
+          gate.refreshBody();
+        },
+      });
+    });
   }
 
   private getLaneSpeed(laneIndex: number): number {

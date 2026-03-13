@@ -1,6 +1,6 @@
 # DataGame
 
-A Phaser 3 + TypeScript + Vite browser game prototype that mixes arcade gameplay inspired by Frogger, Galaga, and Centipede with Grade 12 Data Management questions.
+A Phaser 3 + TypeScript + Vite browser game prototype that mixes arcade gameplay inspired by Frogger, Galaga, and Centipede with Grade 12 Data Management questions. The goal is a classic arcade game coupled with Data Management concepts.
 
 ## Current Prototype
 

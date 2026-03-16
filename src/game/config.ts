@@ -6,8 +6,8 @@ import { GameScene } from '../scenes/GameScene';
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'app',
-  width: 960,
-  height: 640,
+  width: 1280,
+  height: 820,
   backgroundColor: '#08111f',
   physics: {
     default: 'arcade',

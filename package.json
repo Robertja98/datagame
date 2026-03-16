@@ -4,11 +4,20 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:sqlite": "concurrently \"npm:dev:server:sqlite\" \"npm:dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node server/index.js",
+    "dev:server:sqlite": "node --env-file=.env.sqlite server/index.js",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "server:sqlite": "node --env-file=.env.sqlite server/index.js"
   },
   "dependencies": {
+    "concurrently": "^9.2.1",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
     "phaser": "^3.90.0"
   },
   "devDependencies": {

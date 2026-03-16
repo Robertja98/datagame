@@ -1,0 +1,264 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Trebuchet MS', 'Gill Sans', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(130, 188, 255, 0.22), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(255, 206, 117, 0.18), transparent 36%),
+    linear-gradient(180deg, #06101a 0%, #0a1724 100%);
+  color: #eaf4ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+}
+
+.hero,
+.section,
+.preview-card {
+  border: 1px solid rgba(124, 175, 218, 0.2);
+  background: rgba(8, 21, 34, 0.78);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.hero {
+  border-radius: 26px;
+  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffcf7a;
+  font-size: 0.82rem;
+}
+
+.hero h1,
+.section h2,
+.preview-card h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1.08;
+  max-width: 12ch;
+}
+
+.intro,
+.status,
+.hero-meta,
+.help,
+.preview-copy,
+.checkbox-field span {
+  line-height: 1.65;
+  color: #cdddeb;
+}
+
+.hero-actions,
+.toolbar,
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.button,
+.secondary-button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button {
+  background: #ffcf7a;
+  color: #08111f;
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f5fbff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.sections {
+  display: grid;
+  gap: 20px;
+}
+
+.section,
+.preview-card {
+  border-radius: 24px;
+  padding: 24px;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.preset-card {
+  appearance: none;
+  border: 1px solid rgba(124, 175, 218, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5fbff;
+  padding: 18px;
+  text-align: left;
+  display: grid;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.preset-card-active {
+  border-color: rgba(255, 207, 122, 0.7);
+  background: rgba(255, 207, 122, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 207, 122, 0.22);
+}
+
+.preset-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.preset-title-row strong {
+  font-size: 1rem;
+}
+
+.preset-title-row span,
+.preset-description,
+.preset-meta,
+.preset-summary {
+  color: #cdddeb;
+}
+
+.preset-description {
+  line-height: 1.55;
+}
+
+.preset-meta {
+  font-size: 0.84rem;
+}
+
+.preset-summary {
+  margin: 18px 0 0;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 0.88rem;
+  color: #f2f6fb;
+}
+
+.field span {
+  color: #8fb5d4;
+  font-size: 0.8rem;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid rgba(124, 175, 218, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5fbff;
+  border-radius: 14px;
+  padding: 11px 12px;
+  font: inherit;
+}
+
+.checkbox-field {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(124, 175, 218, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+}
+
+.preview-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.preview-item strong {
+  color: #ffcf7a;
+}
+
+.link {
+  color: #9fd3ff;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .layout,
+  .field-grid,
+  .preset-grid {
+    grid-template-columns: 1fr;
+  }
+}

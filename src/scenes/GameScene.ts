@@ -331,6 +331,7 @@ const QUEST_RELICS: QuestRelic[] = [
   },
 ];
 
+
 const QUEST_DUNGEON_BOUNDS = {
   left: 56,
   top: 248,
@@ -367,7 +368,7 @@ const QUEST_DUNGEON_WORLD_GAP = {
   vertical: QUEST_DUNGEON_WORLD_BOUNDS.height - (QUEST_DUNGEON_BOUNDS.height * 2),
 };
 
-const QUEST_WALL_THICKNESS = 16;
+const QUEST_WALL_THICKNESS = 0.5;
 const QUEST_CHAPTER_TOPOLOGY: Record<1 | 2 | 3 | 4, {
   archetype: QuestChapterArchetype;
   extraDoorChance: number;
@@ -2624,11 +2625,12 @@ export class GameScene extends Phaser.Scene {
       const jitterY = horizontal
         ? Phaser.Math.Between(-10, 10)
         : Phaser.Math.Between(-Math.max(12, Math.round(height * 0.46)), Math.max(12, Math.round(height * 0.46)));
+      // Set debris (rock) thickness to 0.01
       const rock = this.add.ellipse(
         x + jitterX,
         y + jitterY,
-        horizontal ? Phaser.Math.Between(10, 22) : Phaser.Math.Between(14, 24),
-        horizontal ? Phaser.Math.Between(14, 24) : Phaser.Math.Between(10, 22),
+        0.01,
+        0.01,
         index % 2 === 0 ? 0x2b2119 : 0x403227,
         Phaser.Math.FloatBetween(0.78, 0.94),
       ).setDepth(depth);

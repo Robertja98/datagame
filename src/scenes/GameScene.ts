@@ -359,8 +359,8 @@ const QUEST_MIN_ROOM_SIZE = {
   height: Math.round(QUEST_HERO_RENDER_SIZE * 1.45),
 };
 const QUEST_TARGET_CELL_SIZE = {
-  width: QUEST_MIN_ROOM_SIZE.width + 24,
-  height: QUEST_MIN_ROOM_SIZE.height + 20,
+  width: (QUEST_MIN_ROOM_SIZE.width + 24) * 5,
+  height: (QUEST_MIN_ROOM_SIZE.height + 20) * 5,
 };
 
 const QUEST_DUNGEON_WORLD_GAP = {
@@ -1015,6 +1015,10 @@ export class GameScene extends Phaser.Scene {
           this.add.rectangle(spawn.x, spawn.y - 1, 12, 3, 0xc9ad67, 0.9).setDepth(2.09),
           this.add.rectangle(spawn.x, spawn.y + 6, 12, 3, 0xc9ad67, 0.9).setDepth(2.09),
         ];
+      // Remove physics body for surface/camp markers so they don't block movement
+      if (isSurface && marker.body) {
+        marker.body.enable = false;
+      }
       this.questTravelMarkers?.add(marker);
     });
 
@@ -1634,6 +1638,10 @@ export class GameScene extends Phaser.Scene {
       });
     };
 
+
+
+
+    // --- Growing Tree Maze Generation for Each Chapter ---
     ([1, 2, 3, 4] as Array<1 | 2 | 3 | 4>).forEach((chapter) => {
       const bounds = this.getQuestDungeonBoundsForChapter(chapter);
       const columnStops = this.buildQuestAxisStops(bounds.left, bounds.width, dungeonColumns, 0.9, 1.1);
@@ -1642,30 +1650,25 @@ export class GameScene extends Phaser.Scene {
       chapterColumnStopsByChapter.set(chapter, columnStops);
       chapterRowStopsByChapter.set(chapter, rowStops);
 
+      // Create room grid
+      const chapterRooms: QuestDungeonRoom[][] = [];
       for (let row = 0; row < dungeonRows; row += 1) {
+        chapterRooms[row] = [];
         for (let column = 0; column < dungeonColumns; column += 1) {
           const cellLeft = columnStops[column];
           const cellTop = rowStops[row];
           const cellWidth = columnStops[column + 1] - cellLeft;
           const cellHeight = rowStops[row + 1] - cellTop;
-          // Prioritize room size: subtract only wall thickness and a small buffer for gates
-          const wallBuffer = QUEST_WALL_THICKNESS + 6; // 6px for gate/gap
-          const maxRoomWidth = Math.max(72, Math.round(cellWidth - wallBuffer));
-          const maxRoomHeight = Math.max(34, Math.round(cellHeight - wallBuffer));
-          const minRoomWidth = Math.min(maxRoomWidth, Math.max(QUEST_MIN_ROOM_SIZE.width, Math.round(cellWidth * 0.62)));
-          const minRoomHeight = Math.min(maxRoomHeight, Math.max(QUEST_MIN_ROOM_SIZE.height, Math.round(cellHeight * 0.56)));
-          // Make room as large as possible in the cell
-          const roomWidth = maxRoomWidth;
-          const roomHeight = maxRoomHeight;
-          // Center the room in the cell
+          const wallBuffer = QUEST_WALL_THICKNESS + 6;
+          const roomWidth = Math.max(72, Math.round(cellWidth - wallBuffer));
+          const roomHeight = Math.max(34, Math.round(cellHeight - wallBuffer));
           const roomBounds = new Phaser.Geom.Rectangle(
             cellLeft + Math.round((cellWidth - roomWidth) / 2),
             cellTop + Math.round((cellHeight - roomHeight) / 2),
             roomWidth,
             roomHeight,
           );
-
-          rooms.push({
+          const room: QuestDungeonRoom = {
             key: getRoomKey(chapter, row, column),
             column,
             row,
@@ -1676,9 +1679,50 @@ export class GameScene extends Phaser.Scene {
             height: roomBounds.height,
             bounds: roomBounds,
             role: 'branch',
-          });
+          };
+          rooms.push(room);
+          chapterRooms[row][column] = room;
         }
       }
+
+      // Growing Tree algorithm
+      const visited = new Set<string>();
+      const openEdges = new Set<string>();
+      const cellList: Array<{ row: number; column: number }> = [];
+      // Start at a random cell
+      const startRow = Phaser.Math.Between(0, dungeonRows - 1);
+      const startCol = Phaser.Math.Between(0, dungeonColumns - 1);
+      cellList.push({ row: startRow, column: startCol });
+      visited.add(getRoomKey(chapter, startRow, startCol));
+
+      while (cellList.length > 0) {
+        // Pick newest cell for long corridors, random for more branching
+        const idx = Phaser.Math.Between(Math.max(0, cellList.length - 3), cellList.length - 1);
+        const { row, column } = cellList[idx];
+        const neighbors: Array<{ row: number; column: number; dir: [number, number] }> = [];
+        if (row > 0 && !visited.has(getRoomKey(chapter, row - 1, column))) neighbors.push({ row: row - 1, column, dir: [-1, 0] });
+        if (row < dungeonRows - 1 && !visited.has(getRoomKey(chapter, row + 1, column))) neighbors.push({ row: row + 1, column, dir: [1, 0] });
+        if (column > 0 && !visited.has(getRoomKey(chapter, row, column - 1))) neighbors.push({ row, column: column - 1, dir: [0, -1] });
+        if (column < dungeonColumns - 1 && !visited.has(getRoomKey(chapter, row, column + 1))) neighbors.push({ row, column: column + 1, dir: [0, 1] });
+
+        if (neighbors.length > 0) {
+          const next = Phaser.Utils.Array.GetRandom(neighbors);
+          // Open the wall between current and next
+          openEdges.add(getEdgeKey(getRoomKey(chapter, row, column), getRoomKey(chapter, next.row, next.column)));
+          visited.add(getRoomKey(chapter, next.row, next.column));
+          cellList.push({ row: next.row, column: next.column });
+        } else {
+          cellList.splice(idx, 1);
+        }
+      }
+
+      // No extra random open edges: only Growing Tree algorithm doors remain
+      // (Intentionally left blank)
+
+      // Use openEdges for wall/gate generation below
+      // (Rest of the function continues as before, using openEdges instead of openDoorEdgeKeys for this chapter)
+
+      // You may need to update later code to use openEdges for this chapter
     });
 
     const roomByKey = new Map(rooms.map((room) => [room.key, room]));
@@ -1790,17 +1834,8 @@ export class GameScene extends Phaser.Scene {
         stack.push(nextRoomKey);
       }
 
-      (intraChapterEdgeKeys.get(chapter) ?? []).forEach((edgeKey) => {
-        if (openDoorEdgeKeys.has(edgeKey)) {
-          return;
-        }
-
-        if (Phaser.Math.FloatBetween(0, 1) <= extraDoorChance) {
-          openDoorEdgeKeys.add(edgeKey);
-        }
-      });
-
-      addChapterArchetypeBonusOpenings(chapter, chapterRooms, chapterEdgeKeys, archetype);
+      // Remove extraDoorChance and archetype bonus openings for fewer doors
+      // (No-op: do not add extra openDoorEdgeKeys here)
     });
 
     rebuildChapterAdjacency();
@@ -1858,7 +1893,23 @@ export class GameScene extends Phaser.Scene {
           const avgRoomHeight = (leftRoom && rightRoom) ? (leftRoom.height + rightRoom.height) / 2 : segmentHeight - QUEST_WALL_THICKNESS;
           const gateHeight = Math.max(28, Math.round(avgRoomHeight * 0.7));
 
+          // Always draw a visual-only sub wall for grid effect
+          if (this.add) {
+            const decorWall = this.add.rectangle(dividerX, segmentTop + segmentHeight / 2, QUEST_WALL_THICKNESS, segmentHeight, 0x19110d, 0.18).setDepth(1);
+            // Add rock-like debris to decorative grid wall
+            this.createQuestRockDecor(
+              dividerX,
+              segmentTop + segmentHeight / 2,
+              QUEST_WALL_THICKNESS,
+              segmentHeight,
+              1.12,
+              QUEST_WALL_THICKNESS >= segmentHeight ? 1 : Phaser.Math.Between(2, 3)
+            );
+          }
+
+          // Add a physical wall for some closed edges (not openDoorEdgeKeys)
           if (!openDoorEdgeKeys.has(edgeKey)) {
+            // No door: draw a full wall
             walls.push({
               chapter,
               x: dividerX,
@@ -1869,10 +1920,11 @@ export class GameScene extends Phaser.Scene {
             continue;
           }
 
+          // Door: split wall into two segments above and below the door
           const gapCenter = segmentTop + segmentHeight / 2;
-          const topHeight = gapCenter - gateHeight / 2 - segmentTop;
+          const topHeight = gateHeight > segmentHeight ? 0 : (gapCenter - gateHeight / 2 - segmentTop);
           const bottomY = gapCenter + gateHeight / 2;
-          const bottomHeight = rowStops[row + 1] - bottomY;
+          const bottomHeight = gateHeight > segmentHeight ? 0 : (rowStops[row + 1] - bottomY);
 
           if (topHeight > QUEST_WALL_THICKNESS) {
             walls.push({
@@ -1882,6 +1934,9 @@ export class GameScene extends Phaser.Scene {
               width: QUEST_WALL_THICKNESS,
               height: topHeight,
             });
+            if (this.add) {
+              this.add.rectangle(dividerX, segmentTop + topHeight / 2, QUEST_WALL_THICKNESS, topHeight, 0x19110d, 0.18).setDepth(1);
+            }
           }
 
           if (bottomHeight > QUEST_WALL_THICKNESS) {
@@ -1892,6 +1947,9 @@ export class GameScene extends Phaser.Scene {
               width: QUEST_WALL_THICKNESS,
               height: bottomHeight,
             });
+            if (this.add) {
+              this.add.rectangle(dividerX, bottomY + bottomHeight / 2, QUEST_WALL_THICKNESS, bottomHeight, 0x19110d, 0.18).setDepth(1);
+            }
           }
 
           gateSpawns.push({
@@ -1920,7 +1978,23 @@ export class GameScene extends Phaser.Scene {
           const avgRoomWidth = (upperRoom && lowerRoom) ? (upperRoom.width + lowerRoom.width) / 2 : segmentWidth - QUEST_WALL_THICKNESS;
           const gateWidth = Math.max(30, Math.round(avgRoomWidth * 0.7));
 
+          // Always draw a visual-only sub wall for grid effect
+          if (this.add) {
+            const decorWall = this.add.rectangle(segmentLeft + segmentWidth / 2, dividerY, segmentWidth, QUEST_WALL_THICKNESS, 0x19110d, 0.18).setDepth(1);
+            // Add rock-like debris to decorative grid wall
+            this.createQuestRockDecor(
+              segmentLeft + segmentWidth / 2,
+              dividerY,
+              segmentWidth,
+              QUEST_WALL_THICKNESS,
+              1.12,
+              segmentWidth <= QUEST_WALL_THICKNESS ? 1 : Phaser.Math.Between(2, 3)
+            );
+          }
+
+          // Add a physical wall for some closed edges (not openDoorEdgeKeys)
           if (!openDoorEdgeKeys.has(edgeKey)) {
+            // No door: draw a full wall
             walls.push({
               chapter,
               x: segmentLeft + segmentWidth / 2,
@@ -1931,10 +2005,11 @@ export class GameScene extends Phaser.Scene {
             continue;
           }
 
+          // Door: split wall into two segments left and right of the door
           const gapCenter = segmentLeft + segmentWidth / 2;
-          const leftWidth = gapCenter - gateWidth / 2 - segmentLeft;
+          const leftWidth = gateWidth > segmentWidth ? 0 : (gapCenter - gateWidth / 2 - segmentLeft);
           const rightX = gapCenter + gateWidth / 2;
-          const rightWidth = columnStops[column + 1] - rightX;
+          const rightWidth = gateWidth > segmentWidth ? 0 : (columnStops[column + 1] - rightX);
 
           if (leftWidth > QUEST_WALL_THICKNESS) {
             walls.push({
@@ -1944,6 +2019,9 @@ export class GameScene extends Phaser.Scene {
               width: leftWidth,
               height: QUEST_WALL_THICKNESS,
             });
+            if (this.add) {
+              this.add.rectangle(segmentLeft + leftWidth / 2, dividerY, leftWidth, QUEST_WALL_THICKNESS, 0x19110d, 0.18).setDepth(1);
+            }
           }
 
           if (rightWidth > QUEST_WALL_THICKNESS) {
@@ -1954,6 +2032,9 @@ export class GameScene extends Phaser.Scene {
               width: rightWidth,
               height: QUEST_WALL_THICKNESS,
             });
+            if (this.add) {
+              this.add.rectangle(rightX + rightWidth / 2, dividerY, rightWidth, QUEST_WALL_THICKNESS, 0x19110d, 0.18).setDepth(1);
+            }
           }
 
           gateSpawns.push({
@@ -2143,6 +2224,16 @@ export class GameScene extends Phaser.Scene {
       } satisfies QuestBossSpawn;
     });
 
+
+    // Ensure all edges along the boss path (main route) are open (after bossPathByChapter is populated)
+    bossPathByChapter.forEach((bossPath, chapter) => {
+      for (let i = 0; i < bossPath.length - 1; i++) {
+        const fromKey = bossPath[i];
+        const toKey = bossPath[i + 1];
+        openDoorEdgeKeys.add(getEdgeKey(fromKey, toKey));
+      }
+    });
+
     bossPathByChapter.forEach((bossPath, chapter) => {
       const pathRooms = bossPath
         .map((roomKey) => roomByKey.get(roomKey))
@@ -2165,7 +2256,11 @@ export class GameScene extends Phaser.Scene {
 
     const trialSpawns: Array<{ x: number; y: number; chapter: 1 | 2 | 3 | 4; roomKey: string }> = [];
     ([1, 2, 3, 4] as Array<1 | 2 | 3 | 4>).forEach((chapter) => {
-      const chapterRooms = Phaser.Utils.Array.Shuffle(getChapterRooms(chapter).filter((room) => !usedRoomKeys.has(room.key)));
+      const bossPathKeys = new Set(bossPathByChapter.get(chapter) ?? []);
+      const chapterRooms = Phaser.Utils.Array.Shuffle(
+        getChapterRooms(chapter)
+          .filter((room) => !usedRoomKeys.has(room.key) && !bossPathKeys.has(room.key))
+      );
       const desiredTrialCount = Phaser.Math.Between(questSettings.trialsPerChapterMin, questSettings.trialsPerChapterMax);
       chapterRooms.slice(0, desiredTrialCount).forEach((room) => {
         usedRoomKeys.add(room.key);
@@ -2233,11 +2328,12 @@ export class GameScene extends Phaser.Scene {
     };
     ([1, 2, 3, 4] as Array<1 | 2 | 3 | 4>).forEach((chapter) => {
       const entryRoom = chapterEntryRoomByChapter.get(chapter);
+      const bossPathKeys = new Set(bossPathByChapter.get(chapter) ?? []);
       const chapterMonsterPool = [...this.getQuestChapterMonsterPool(chapter)];
       const chapterRooms = [...(chapterReachableRoomsByChapter.get(chapter) ?? getChapterRooms(chapter))]
-        .filter((room) => !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds));
+        .filter((room) => !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds) && !bossPathKeys.has(room.key));
       const deadEndCandidates = [...(chapterDeadEndRoomsByChapter.get(chapter) ?? [])]
-        .filter((room) => !usedRoomKeys.has(room.key) && !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds));
+        .filter((room) => !usedRoomKeys.has(room.key) && !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds) && !bossPathKeys.has(room.key));
       const desiredMonsterCount = Phaser.Math.Between(questSettings.baseMonsterRoomsMin, questSettings.baseMonsterRoomsMax);
       const packCount = Phaser.Math.Between(questSettings.packMonsterCountMin, questSettings.packMonsterCountMax);
       const guardedBranchRooms = chapterRooms
@@ -3304,6 +3400,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleSceneKeyDown(event: KeyboardEvent): void {
+    // Only call preventDefault if a game action is actually handled
     if (!this.calculatorOpen && this.gameMode === 'quest' && this.handleQuestAnswerInputKey(event)) {
       event.preventDefault();
       return;
@@ -3355,7 +3452,9 @@ export class GameScene extends Phaser.Scene {
     if (event.key === 'Backspace') {
       event.preventDefault();
       this.handleCalculatorInput('backspace');
+      return;
     }
+    // If no game action was handled, do not call preventDefault
   }
 
   private getQuestAnswerIndexFromKey(key: string): number | null {
@@ -5108,8 +5207,9 @@ export class GameScene extends Phaser.Scene {
         fogZone.revealed = true;
       }
 
-      fogZone.exploreLevel = Math.max(fogZone.exploreLevel, localLight * 0.72);
-      const targetAlpha = Phaser.Math.Clamp(0.96 - fogZone.exploreLevel * 0.44 - localLight * 0.68, 0.14, 0.96);
+      // Make exposed areas much brighter (lower alpha)
+      fogZone.exploreLevel = Math.max(fogZone.exploreLevel, localLight * 0.92);
+      const targetAlpha = Phaser.Math.Clamp(0.92 - fogZone.exploreLevel * 0.68 - localLight * 0.88, 0.04, 0.96);
       fogZone.setAlpha(targetAlpha);
     });
 

@@ -1121,8 +1121,10 @@ export class GameScene extends Phaser.Scene {
       monster.contactDamage = spawn.contactDamage;
       monster.lastContactAt = 0;
       monster.driftSeed = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      monster.setAlpha(0.05);
-      monster.setScale(0.86);
+      monster.setAlpha(0.12);
+      // Set monster scale to 5-10x hero size (hero scale is 0.78)
+      const monsterScale = Phaser.Math.FloatBetween(4, 8) * 0.78;
+      monster.setScale(monsterScale);
       monster.setImmovable(false);
       const monsterBody = monster.body as Phaser.Physics.Arcade.Body | null;
       if (monsterBody) {
@@ -2330,8 +2332,9 @@ export class GameScene extends Phaser.Scene {
       const entryRoom = chapterEntryRoomByChapter.get(chapter);
       const bossPathKeys = new Set(bossPathByChapter.get(chapter) ?? []);
       const chapterMonsterPool = [...this.getQuestChapterMonsterPool(chapter)];
+      // Only allow monster spawns in rooms on the boss path (main route)
       const chapterRooms = [...(chapterReachableRoomsByChapter.get(chapter) ?? getChapterRooms(chapter))]
-        .filter((room) => !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds) && !bossPathKeys.has(room.key));
+        .filter((room) => !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds) && bossPathKeys.has(room.key));
       const deadEndCandidates = [...(chapterDeadEndRoomsByChapter.get(chapter) ?? [])]
         .filter((room) => !usedRoomKeys.has(room.key) && !bossSpawns.some((bossSpawn) => bossSpawn.chapter === chapter && bossSpawn.chamber === room.bounds) && !bossPathKeys.has(room.key));
       const desiredMonsterCount = Phaser.Math.Between(questSettings.baseMonsterRoomsMin, questSettings.baseMonsterRoomsMax);
@@ -2405,8 +2408,7 @@ export class GameScene extends Phaser.Scene {
       const selectedStandardRooms = desiredMonsterCount <= 0
         ? []
         : [
-          ...routeMonsterRooms.slice(0, 1),
-          ...standardRooms.filter((room) => !routeMonsterRooms.slice(0, 1).some((candidate) => candidate.key === room.key)),
+          ...routeMonsterRooms,
         ].slice(0, desiredMonsterCount);
 
       selectedStandardRooms.forEach((room, index) => {
@@ -2911,6 +2913,7 @@ export class GameScene extends Phaser.Scene {
 
     this.questGates?.getChildren().forEach((child) => {
       const gate = child as QuestGate;
+      // Ensure gates are only hidden if opened by the hero, never by boss events
       const visible = dungeonVisible && gate.chapter === chapter && !gate.opened;
       gate.setVisible(visible);
       gate.body.enable = visible;

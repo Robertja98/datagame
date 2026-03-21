@@ -1,0 +1,47 @@
+Unit 3 Quiz Review
+Probability formulas provided on quiz:
+𝑃(𝐴)=# 𝑜𝑓 𝑡𝑖𝑚𝑒𝑠 𝑒𝑣𝑒𝑛𝑡 𝑜𝑐𝑐𝑢𝑟𝑠# 𝑜𝑓 𝑡𝑟𝑖𝑎𝑙𝑠
+Experimental Probability Practice Questions:
+
+
+1. A standard die is rolled 15 times and a 5 comes up 4 times. What is the experimental probability of rolling a 5?
+2. A coin is tossed 12 times and lands on heads 7 times. What is the experimental probability of the coin landing on tails?
+3. A spinner with numbers 1–6 is spun 20 times, and it lands on 3 a total of 6 times. What is the experimental probability of spinning a 3?
+4. A basketball player makes 18 out of 25 free throw attempts. What is the experimental probability that the player makes a free throw?
+5. A bag contains different colored marbles. A student randomly draws a marble 16 times, and blue appears 5 times. What is the experimental probability of drawing a blue marble?
+6. A soccer player scores 14 goals out of 22 shots on goal. What is the experimental probability that the player scores on a shot?
+7. Maya correctly answers 24 out of 30 math questions on a quiz.
+a) What is the experimental probability that Maya answers a question correctly?
+b) If Maya answers 6 out of the next 10 questions correctly, what is her new overall experimental probability?
+8. A baseball player gets 9 hits out of 20 at-bats.
+a) What is the experimental probability of getting a hit?
+b) If the player gets 3 hits in the next 10 at-bats, what is the new overall experimental probability?
+9. A six-sided die is rolled 40 times. The results are recorded as follows:
+● 1 appears 5 times
+● 2 appears 8 times
+● 3 appears 6 times
+● 4 appears 9 times
+● 5 appears 7 times
+● 6 appears 5 times
+a) What is the experimental probability of rolling a 4?
+b) What is the experimental probability of rolling an even number?
+c) Based on the experiment, what is the experimental probability of rolling a number greater than 4?
+
+
+Theoretical Probability Practice Questions:
+1. A bag contains 4 red marbles, 3 blue marbles, and 2 yellow marbles. One marble is chosen at random. What is the theoretical probability of choosing a blue marble?
+2. Determine the theoretical probability of each event:
+a) Rolling an even number on a standard six-sided die
+b) Rolling a number greater than 4 on a standard six-sided die
+c) Drawing a spade from a standard deck of 52 cards
+d) Drawing a queen from a standard deck of 52 cards
+e) Drawing a black card from a standard deck of 52 cards
+3. You are playing a card game. You lose if you draw a red card from a full deck of 52 playing cards. What is the theoretical probability that you will win on the first draw?
+4. A spinner has 5 equal sections labeled A, B, C, D, and E.
+a) What is the probability of landing on C?
+b) What is the probability of landing on a letter before D in the alphabet?
+5. Sara has a blue shirt, a white shirt, and a black shirt. She also has blue shoes, black shoes, and red shoes.
+a) Construct a tree diagram to show all possible outfits.
+6. A bag contains 5 green balls, 3 yellow balls, and 2 purple balls. Two balls are chosen one at a time without replacement.
+a) What is the probability that both balls are green?
+b) What is the probability that the first ball is yellow and the second ball is purple?

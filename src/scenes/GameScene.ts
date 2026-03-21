@@ -804,9 +804,13 @@ export class GameScene extends Phaser.Scene {
     this.questAnswerInputPanel.setVisible(true);
     this.questAnswerInputText.setVisible(true);
     this.questAnswerHintText.setVisible(!dungeonMode);
+    // Show multiple-choice for formula/word-problem, open-ended for others
+    const isMCQ = this.currentQuestion && (this.currentQuestion.category === 'formula' || this.currentQuestion.category === 'word-problem');
     this.questChoiceTexts.forEach((text) => {
-      text.setVisible(true);
+      text.setVisible(!!isMCQ);
     });
+    this.questAnswerInputPanel.setVisible(!isMCQ);
+    this.questAnswerInputText.setVisible(!isMCQ);
     this.progressText.setVisible(false);
     this.explanationText.setVisible(this.explanationText.text.trim().length > 0);
     this.modeText.setVisible(false);
@@ -1122,8 +1126,8 @@ export class GameScene extends Phaser.Scene {
       monster.lastContactAt = 0;
       monster.driftSeed = Phaser.Math.FloatBetween(0, Math.PI * 2);
       monster.setAlpha(0.12);
-      // Set monster scale to 5-10x hero size (hero scale is 0.78)
-      const monsterScale = Phaser.Math.FloatBetween(4, 8) * 0.78;
+      // Set monster scale to 8-16x hero size (hero scale is 0.78)
+      const monsterScale = Phaser.Math.FloatBetween(8, 16) * 0.78;
       monster.setScale(monsterScale);
       monster.setImmovable(false);
       const monsterBody = monster.body as Phaser.Physics.Arcade.Body | null;
@@ -1203,7 +1207,8 @@ export class GameScene extends Phaser.Scene {
     this.questBoss.setImmovable(true);
     this.questBoss.setDepth(4.6);
     this.questBoss.setAlpha(0.18);
-    this.questBoss.setScale(0.76);
+    // Make the end boss the largest: 20x hero size
+    this.questBoss.setScale(0.78 * 20);
     this.questBoss.setTint(0x8a4861);
     this.questBossHazards = this.physics.add.group({ allowGravity: false, immovable: false, runChildUpdate: false });
 
@@ -1520,45 +1525,7 @@ export class GameScene extends Phaser.Scene {
           return perimeterBias * 6 + (candidateRoom.row === currentRoom.row || candidateRoom.column === currentRoom.column ? 2 : 0) - centerDistance;
       }
     };
-    const addChapterArchetypeBonusOpenings = (
-      chapter: 1 | 2 | 3 | 4,
-      chapterRooms: QuestDungeonRoom[],
-      chapterEdgeKeys: Set<string>,
-      archetype: QuestChapterArchetype,
-    ): void => {
-      const closedEdgeCandidates = [...chapterEdgeKeys].filter((edgeKey) => !openDoorEdgeKeys.has(edgeKey));
-      if (archetype === 'loop-heavy') {
-        Phaser.Utils.Array.Shuffle(closedEdgeCandidates)
-          .slice(0, Math.max(2, Math.min(5, Math.round(chapterRooms.length * 0.08))))
-          .forEach((edgeKey) => {
-            openDoorEdgeKeys.add(edgeKey);
-          });
-        return;
-      }
-
-      if (archetype !== 'ring') {
-        return;
-      }
-
-      for (let column = 0; column < dungeonColumns - 1; column += 1) {
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, 0, column), getRoomKey(chapter, 0, column + 1)));
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, dungeonRows - 1, column), getRoomKey(chapter, dungeonRows - 1, column + 1)));
-      }
-
-      for (let row = 0; row < dungeonRows - 1; row += 1) {
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, row, 0), getRoomKey(chapter, row + 1, 0)));
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, row, dungeonColumns - 1), getRoomKey(chapter, row + 1, dungeonColumns - 1)));
-      }
-
-      const centerColumn = Math.floor(dungeonColumns / 2);
-      const centerRow = Math.floor(dungeonRows / 2);
-      for (let row = 0; row < dungeonRows - 1; row += 1) {
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, row, centerColumn), getRoomKey(chapter, row + 1, centerColumn)));
-      }
-      for (let column = 0; column < dungeonColumns - 1; column += 1) {
-        openDoorEdgeKeys.add(getEdgeKey(getRoomKey(chapter, centerRow, column), getRoomKey(chapter, centerRow, column + 1)));
-      }
-    };
+    // ...existing code...
     const getPathBetweenRooms = (startRoomKey: string, targetRoomKey: string): string[] => {
       if (startRoomKey === targetRoomKey) {
         return [startRoomKey];
@@ -1758,7 +1725,7 @@ export class GameScene extends Phaser.Scene {
       const chapterEdgeKeys = new Set<string>();
       const topology = QUEST_CHAPTER_TOPOLOGY[chapter];
       const archetype = this.getQuestChapterArchetype(chapter);
-      const extraDoorChance = Phaser.Math.Clamp(topology.extraDoorChance * questSettings.extraDoorChanceMultiplier, 0, 1);
+      // ...existing code...
 
       chapterRooms.forEach((room) => {
         const neighborKeys = [
@@ -1897,7 +1864,7 @@ export class GameScene extends Phaser.Scene {
 
           // Always draw a visual-only sub wall for grid effect
           if (this.add) {
-            const decorWall = this.add.rectangle(dividerX, segmentTop + segmentHeight / 2, QUEST_WALL_THICKNESS, segmentHeight, 0x19110d, 0.18).setDepth(1);
+            this.add.rectangle(dividerX, segmentTop + segmentHeight / 2, QUEST_WALL_THICKNESS, segmentHeight, 0x19110d, 0.18).setDepth(1);
             // Add rock-like debris to decorative grid wall
             this.createQuestRockDecor(
               dividerX,
@@ -1982,7 +1949,7 @@ export class GameScene extends Phaser.Scene {
 
           // Always draw a visual-only sub wall for grid effect
           if (this.add) {
-            const decorWall = this.add.rectangle(segmentLeft + segmentWidth / 2, dividerY, segmentWidth, QUEST_WALL_THICKNESS, 0x19110d, 0.18).setDepth(1);
+            this.add.rectangle(segmentLeft + segmentWidth / 2, dividerY, segmentWidth, QUEST_WALL_THICKNESS, 0x19110d, 0.18).setDepth(1);
             // Add rock-like debris to decorative grid wall
             this.createQuestRockDecor(
               segmentLeft + segmentWidth / 2,
@@ -2228,7 +2195,7 @@ export class GameScene extends Phaser.Scene {
 
 
     // Ensure all edges along the boss path (main route) are open (after bossPathByChapter is populated)
-    bossPathByChapter.forEach((bossPath, chapter) => {
+    bossPathByChapter.forEach((bossPath) => {
       for (let i = 0; i < bossPath.length - 1; i++) {
         const fromKey = bossPath[i];
         const toKey = bossPath[i + 1];
@@ -2275,7 +2242,7 @@ export class GameScene extends Phaser.Scene {
       });
     });
 
-    const chestSpawns = ([1, 2, 3] as Array<1 | 2 | 3>).map((chapter) => {
+    const chestSpawns = ([1, 2, 3, 4] as Array<1 | 2 | 3 | 4>).map((chapter) => {
       // Guarantee at least one chest per chapter (now for all 4 chapters)
       const entryRoom = chapterEntryRoomByChapter.get(chapter);
       const bossPathKeys = new Set(bossPathByChapter.get(chapter) ?? []);
@@ -2943,7 +2910,8 @@ export class GameScene extends Phaser.Scene {
 
     this.treasureChests?.getChildren().forEach((child) => {
       const chest = child as TreasureChest;
-      const visible = dungeonVisible && chest.chapter === chapter && chest.active;
+      // Always show chests in dungeon mode for the current chapter
+      const visible = dungeonVisible && chest.chapter === chapter;
       chest.setVisible(visible);
       if (chest.body) {
         chest.body.enable = visible;
@@ -3073,7 +3041,7 @@ export class GameScene extends Phaser.Scene {
         padding: { left: 8, right: 8, top: 6, bottom: 6 },
       }).setDepth(hudDepth).setInteractive({ useHandCursor: true }).setVisible(this.gameMode === 'quest'));
       text.on('pointerdown', () => {
-        this.handleAnswer(index);
+        this.handleAnswer();
       });
       return text;
     });
@@ -3409,14 +3377,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.calculatorOpen && this.gameMode === 'quest' && !this.questAnswerInputFocused) {
-      const answerIndex = this.getQuestAnswerIndexFromKey(event.key);
-      if (answerIndex !== null) {
-        event.preventDefault();
-        this.handleAnswer(answerIndex);
-        return;
-      }
-    }
+    // In quest mode, do NOT allow 1/2/3 keys to submit answers. Only Enter in the answer field submits.
 
     if (!this.calculatorOpen) {
       return;
@@ -3460,7 +3421,7 @@ export class GameScene extends Phaser.Scene {
     // If no game action was handled, do not call preventDefault
   }
 
-  private getQuestAnswerIndexFromKey(key: string): number | null {
+  private _getQuestAnswerIndexFromKey(key: string): number | null {
     if (!this.currentQuestion || !this.acceptingAnswer) {
       return null;
     }
@@ -3552,7 +3513,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const visible = false;
+    const visible = true;
     this.questAnswerInputPanel.setVisible(visible);
     this.questAnswerInputText.setVisible(visible);
     this.questAnswerHintText.setVisible(visible);
@@ -3579,11 +3540,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (answerIndex !== null) {
-      this.submitAnswerResult(answerIndex, answerIndex === this.currentQuestion.answerIndex);
+      // For open-ended, always check typed answer, not index
+      const typedAnswer = this.questTypedAnswer;
+      const isCorrect = this.questAnswersMatch(typedAnswer, this.currentQuestion.answer);
+      this.submitAnswerResult(undefined, isCorrect);
       return;
     }
 
-    const isCorrect = this.questAnswersMatch(typedAnswer, this.currentQuestion.options[this.currentQuestion.answerIndex]);
+    const isCorrect = this.questAnswersMatch(typedAnswer, this.currentQuestion.answer);
     this.submitAnswerResult(undefined, isCorrect);
   }
 
@@ -3602,7 +3566,8 @@ export class GameScene extends Phaser.Scene {
       return Number(shortcutMatch[1]) - 1;
     }
 
-    const matchedIndex = this.currentQuestion.options.findIndex((option) => this.questAnswersMatch(trimmed, option));
+    // For open-ended, no options to match; just compare to answer
+    const matchedIndex = this.questAnswersMatch(trimmed, this.currentQuestion.answer) ? 0 : -1;
     return matchedIndex >= 0 ? matchedIndex : null;
   }
 
@@ -3659,6 +3624,9 @@ export class GameScene extends Phaser.Scene {
 
   private toggleCalculator(): void {
     if (this.gameOver || this.recovering || !this.acceptingAnswer || !this.trackerReady) {
+      // Debug log
+      // @ts-ignore
+      window.console && window.console.log && window.console.log('[DEBUG] Calculator toggle blocked: gameOver=%s recovering=%s acceptingAnswer=%s trackerReady=%s', this.gameOver, this.recovering, this.acceptingAnswer, this.trackerReady);
       return;
     }
 
@@ -3668,6 +3636,28 @@ export class GameScene extends Phaser.Scene {
 
     this.calculatorOpen = !this.calculatorOpen;
     this.calculatorContainer.setVisible(this.calculatorOpen);
+    this.calculatorContainer.setDepth(this.calculatorOpen ? 1000 : 30); // Always bring to front when open
+    // Debug log
+    // @ts-ignore
+    window.console && window.console.log && window.console.log('[DEBUG] Calculator %s', this.calculatorOpen ? 'opened' : 'closed');
+    // Ensure Phaser input is enabled
+    if (this.input && !this.input.enabled) {
+      this.input.enabled = true;
+      // @ts-ignore
+      window.console && window.console.log && window.console.log('[DEBUG] Phaser input.enabled was false, now set to true');
+    }
+    // Force calculatorContainer and children to be interactive
+    if (this.calculatorOpen) {
+      this.calculatorContainer.iterate && this.calculatorContainer.iterate((child: Phaser.GameObjects.GameObject) => {
+        if ((child as any).setInteractive) {
+          (child as any).setInteractive({ useHandCursor: true });
+          (child as any).on && (child as any).on('pointerdown', () => {
+            // @ts-ignore
+            window.console && window.console.log && window.console.log('[DEBUG] Calculator button pointerdown', child);
+          });
+        }
+      });
+    }
     this.playImpactTone(this.calculatorOpen ? 520 : 340, this.calculatorOpen ? 660 : 240, 0.07, 0.03);
 
     if (this.calculatorOpen) {
@@ -4453,7 +4443,7 @@ export class GameScene extends Phaser.Scene {
       gate.answerIndex = index;
       gate.setInteractive({ useHandCursor: true });
       gate.on('pointerdown', () => {
-        this.handleAnswer(index);
+        this.handleAnswer();
       });
       gate.answerLabel = this.add.text(x, answerY, '', {
         fontFamily: 'Trebuchet MS',
@@ -4464,7 +4454,7 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5);
       gate.answerLabel.setInteractive({ useHandCursor: true });
       gate.answerLabel.on('pointerdown', () => {
-        this.handleAnswer(index);
+        this.handleAnswer();
       });
       return gate;
     });
@@ -4534,7 +4524,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     for (const gate of this.gates) {
-      this.physics.add.overlap(this.player, gate, () => this.handleAnswer(gate.answerIndex), undefined, this);
+      this.physics.add.overlap(this.player, gate, () => this.handleAnswer(), undefined, this);
     }
   }
 
@@ -4554,7 +4544,7 @@ export class GameScene extends Phaser.Scene {
     void this.track(recordQuestionUsed(this.currentQuestion), 'Tracker could not record question usage.');
     this.currentQuestionSource = 'standard';
     this.activeTreasureChest = undefined;
-    this.setFocusedQuestGate(undefined);
+    // Do NOT clear focused quest gate here; it should persist until answer is processed
     this.refreshPromptLayout(this.currentQuestion.prompt);
     this.refreshSupportingDataLayout(this.currentQuestion);
     this.refreshCalculatorQuestionData();
@@ -4568,7 +4558,7 @@ export class GameScene extends Phaser.Scene {
       this.refreshQuestTrials();
     } else {
       for (const gate of this.gates) {
-        gate.answerLabel.setText(this.currentQuestion.options[gate.answerIndex]);
+        gate.answerLabel.setText(this.currentQuestion.answer);
         gate.clearTint();
         gate.answerLabel.setColor('#f4f7fb');
       }
@@ -4583,9 +4573,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     const baseBackground = this.isQuestDungeonMode() ? 'rgba(11, 24, 38, 0.18)' : '#13243a';
+    const q = this.currentQuestion;
+    const isMC = q && Array.isArray(q.options) && typeof q.answerIndex === 'number' && q.options.length === 3;
 
     this.questChoiceTexts.forEach((choiceText, index) => {
-      const optionText = this.currentQuestion?.options[index] ?? '';
+      let optionText = '';
+      if (isMC && q) {
+        optionText = q.options![index] ?? '';
+      } else if (index === 0 && q) {
+        optionText = q.answer;
+      }
       choiceText.setText(`${index + 1}. ${optionText}`);
       choiceText.setColor('#f4f7fb');
       choiceText.setBackgroundColor(baseBackground);
@@ -4594,15 +4591,17 @@ export class GameScene extends Phaser.Scene {
         return;
       }
 
-      if (index === this.currentQuestion.answerIndex) {
+      if (isMC && q) {
+        if (index === q.answerIndex) {
+          choiceText.setColor('#08111f');
+          choiceText.setBackgroundColor('#7ee2a8');
+        } else if (!isCorrect && selectedAnswerIndex !== undefined && index === selectedAnswerIndex) {
+          choiceText.setColor('#08111f');
+          choiceText.setBackgroundColor('#ff8c99');
+        }
+      } else if (index === 0) {
         choiceText.setColor('#08111f');
         choiceText.setBackgroundColor('#7ee2a8');
-        return;
-      }
-
-      if (!isCorrect && selectedAnswerIndex !== undefined && index === selectedAnswerIndex) {
-        choiceText.setColor('#08111f');
-        choiceText.setBackgroundColor('#ff8c99');
       }
     });
   }
@@ -4642,7 +4641,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildAnswerReviewText(isCorrect: boolean): string {
-    const correctAnswer = this.currentQuestion.options[this.currentQuestion.answerIndex];
+    const correctAnswer = this.currentQuestion.answer;
     const activeBossTitle = this.questBoss?.title ?? this.getQuestEncounter().foeName;
 
     if (this.gameMode === 'quest') {
@@ -4703,7 +4702,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const correctAnswerIndex = this.currentQuestion.answerIndex;
+    // No answerIndex; always 0 for open-ended
+    const correctAnswerIndex = 0;
 
     this.gates[correctAnswerIndex].setTint(0x48d597);
     this.gates[correctAnswerIndex].answerLabel.setColor('#08111f');
@@ -4780,11 +4780,22 @@ export class GameScene extends Phaser.Scene {
     this.nextQuestion();
   }
 
-  private handleAnswer(answerIndex: number): void {
-    this.submitAnswerResult(answerIndex, answerIndex === this.currentQuestion.answerIndex);
+  private handleAnswer(): void {
+    // For open-ended, check typed answer
+    const isCorrect = this.questAnswersMatch(this.questTypedAnswer, this.currentQuestion.answer);
+    this.submitAnswerResult(undefined, isCorrect);
   }
 
   private submitAnswerResult(selectedAnswerIndex: number | undefined, isCorrect: boolean): void {
+        // If correct in quest mode, open the focused gate (door)
+        if (this.gameMode === 'quest' && isCorrect && this.focusedQuestGate && !this.focusedQuestGate.opened) {
+          this.focusedQuestGate.opened = true;
+          this.focusedQuestGate.setVisible(false);
+          if (this.focusedQuestGate.body) {
+            this.focusedQuestGate.body.enable = false;
+          }
+          this.setFocusedQuestGate(undefined);
+        }
     const requiresGateProximity = this.gameMode !== 'quest';
 
     if (!this.acceptingAnswer || this.gameOver || this.recovering || this.invulnerable || (requiresGateProximity && this.player.y > this.getAnswerGateY() + 40)) {
@@ -6746,7 +6757,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getQuestRewardProfile(question: MathQuestion = this.currentQuestion): { hpGain: number; runeGain: number } {
-    const answerText = question.options[question.answerIndex];
+    const answerText = question.answer;
     const numericValue = this.extractAnswerMagnitude(answerText);
     const simplicityBonus = 7 - question.difficulty;
     const answerBonus = numericValue === null ? 1 : Phaser.Math.Clamp(Math.round(Math.log10(Math.abs(numericValue) + 1) * 3), 1, 4);

@@ -46,14 +46,14 @@ export const DEFAULT_QUEST_ADMIN_SETTINGS: QuestAdminSettings = {
   trialsPerChapterMin: 4,
   trialsPerChapterMax: 4,
   chestCount: 3,
-  baseMonsterRoomsMin: 3,
-  baseMonsterRoomsMax: 5,
-  packMonsterCountMin: 3,
-  packMonsterCountMax: 5,
-  mainRouteMonsterBias: 4,
-  junctionMonsterBias: 5,
-  treasureBranchPackBias: 5,
-  bossApproachMonsterBias: 6,
+  baseMonsterRoomsMin: 12, // Even more monster rooms
+  baseMonsterRoomsMax: 20, // Even more monster rooms
+  packMonsterCountMin: 10, // Much larger packs
+  packMonsterCountMax: 18, // Much larger packs
+  mainRouteMonsterBias: 14, // Even more monsters on main route
+  junctionMonsterBias: 16, // Even more monsters at junctions
+  treasureBranchPackBias: 14, // Even more monsters on treasure branches
+  bossApproachMonsterBias: 20, // Even more monsters near boss
   enableHunterRoom: true,
   monsterHpMultiplier: 1,
   monsterDamageBonus: 0,
